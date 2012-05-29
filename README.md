@@ -1,3 +1,4 @@
+[Demo and Documentation](http://lp344.github.com/jQuery.Gantt/)
 
 
 jQuery Gantt Chart is a simple chart that implements gantt functionality as 
