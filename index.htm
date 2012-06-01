@@ -4,7 +4,8 @@
         <title>jQuery.Gantt</title>
 		<meta charset="utf-8">
 		<meta http-equiv="X-UA-Compatible" content="IE=Edge;chrome=1" >
-        <link rel="stylesheet" href="css/style.css" />
+		<link rel="stylesheet" href="css/style.css" />
+        <link rel="stylesheet" href="css/jquery-ui-1.8.20.custom.css" />
         <link rel="stylesheet" href="http://twitter.github.com/bootstrap/assets/css/bootstrap.css" />
         <link rel="stylesheet" href="http://taitems.github.com/UX-Lab/core/css/prettify.css" />
 		<style type="text/css">
@@ -14,7 +15,7 @@
 				padding: 0 0 50px 0;
 			}
 			.contain {
-				width: 800px;
+				width: 880px;
 				margin: 0 auto;
 			}
 			h1 {
@@ -45,10 +46,20 @@
 		    </h2>
             
 		    When looking for an implementation for a jQuery Gantt Solution, i stumbled upon the nice work of <a href="http://mbielanczuk.com/" target="_blank">Marek Bielańczuk</a>  and Tait Brown.<br />
-		    While the widget look promising, unfortunately, the performance was poor (rendering time several seconds for ~ 100 Items in week view, over a minute in day view)
-		    I took the liberty an rewrote parts of the original code, boosting performance and adding a couple of features
+		    While the widget looked promising, unfortunately, the performance was poor (rendering time several seconds for ~ 100 Items in week view, over a minute in day view).<br />
+&nbsp;I took the liberty an rewrote parts of the original code, boosting performance and adding a couple of features.<br />
+            <br />
 		    
-            Comments are always welcome!
+		    Comments are always welcome!
+		    <h2>
+		        Changes for 1.2
+		    </h2>
+		    <ul>
+		        <li></li>
+                <li>Removed <code>onAddClicked</code> event handler, and added <code>onEmptyCell</code>, so dev can bind on any (or multiple) events.</li>
+		        <li>Removed <code>onclick</code> event handler, use <code>onItem</code> instead. 
+                When including jQuery.resizable, it is possible to subscribe to the <code>resize</code> event of an item</li>
+		    </ul>
 		    <h2>
 		        Changes for 1.1
 		    </h2>
@@ -73,7 +84,8 @@
 	    	</h2>
 				
 			<div class="gantt"></div>
-
+		    <div style="width: 100%;height: 24px;border:1px solid black" id="mouseover"></div>
+            <div style="width: 100%;height: 24px;border:1px solid blue;margin-top:24px" id="msg"></div>
 
 
 			<h2>
@@ -206,20 +218,85 @@ $(".selector").gantt({
 					</tr>
 					<tr>
 						<td>
-						    <code>onclick: </code>
+						    <code>onItem: </code>
                             </td>
 						<td>
-							<code>function (data) { return; }</code></td>
+							<code>[]</code></td>
 						<td>
-						    a JS Function that gets called when clicking on a Gantt-Item. <br />The parameter passed to the function is the dataObj of the item</td>
+						    an Array containing the events for the empty aera of the datapanel. You can bind 
+                            multiple events, e.g mouseOver ond click, each binding to a different function..<br />
+                            <br />
+				            Syntax: 
+				            <pre><code>
+onItem :
+[
+ {
+   {
+    event: 'click',
+    func: function (e, data) {
+        var i = data.id;
+        alert("Would call out to server for editing item " + i);
+    }
+},
+    {
+        event: 'mouseover',
+        func: function (e, data) {
+            $("#mouseover").html("Hover over item: " + data.id);
+                                       
+        }
+    },
+    {
+        event: 'resize',
+        func: function (e, data, newValues) {
+            var startdate = new Date(parseInt(newValues.startDate));
+            var enddate = new Date(parseInt(newValues.endDate));
+            alert("StartDate: " + startdate + ", EndDate:" + enddate);
+        }
+    }
+]
+</code></pre> <br />In case of using <code>resize</code>  jQuery.resizable must be included.<br/>
+ The parameter passed to the function is the event,  the dataobject for the item, and a object containing the new value after resize (startDate or endDate). Only the changed value is supplied - e.g. resize on the right: endDate
+                            </td>
 					</tr>
 				    <tr>
 				        <td>
-				            <code>onAddClick</code></td>
+				            <code>onEmptyCell</code></td>
 				        <td>
-				            <code>function (dt, rowId) { return; }</code></td>
+				            <code>[]</code></td>
 				        <td>
-				            a JS Function that gets called when clicking on a Gantt-Item. <br />The parameter passed to the function is the DateTime in ms for the clicked Cell, and the ID if the source object (row)</td>
+				            an Array containing the events for the empty aera of the datapanel. You can bind 
+                            multiple events, e.g mouseOver ond click, each binding to a different function..<br />
+                            <br />
+				            Syntax: 
+				            <pre><code>
+onEmptyCell :
+[
+ { 
+	event: 'dblclick',
+	func: function(dt, rowId(
+		{
+			alert('Double Clicked');
+		}
+ }
+]
+</code></pre> <br /><br />
+&nbsp;JS Function that gets called when clicking on a Gantt-Item. <br />The parameter passed to the function is the DateTime in ms for the clicked Cell, and the ID if the source object (row)</td>
+				    </tr>
+				    <tr>
+				        <td>
+				            <code>resizeable</code></td>
+				        <td>
+				            <code>false</code></td>
+				        <td>
+				            <code>boolean</code><br />Indicated wether the items can be resized. jQuery.UI.resizable must be included for this to work.</td>
+				    </tr>
+				    <tr>
+				        <td>
+				            <code>onResize</code></td>
+				        <td>
+				            <code>function (data, newValues){return}</code> </td>
+				        <td>
+				            a JS Function that gets called when <code>resizable</code> is <code>true</code> and an items got resized.<br />The parameter passed to the function is the dataobject for the item, and a object containing the new value after resize (startDate or endDate). Only the changed value is supplied - e.g. resize on the right: endDate</td>
 				    </tr>
                     <tr>
 						<td>
@@ -227,7 +304,7 @@ $(".selector").gantt({
 						<td>
 							<code>true</code></td>
 						<td>
-						    indicates if cookies should be used to track the chart's state (scale, scrollposition) between postpacks<br />
+						    <code>boolean</code><br />indicates if cookies should be used to track the chart's state (scale, scrollposition) between postpacks<br />
 						    <code>jquery.cookie.js</code> needs to be referenced for this to work</td>
 					</tr>
 					<tr>
@@ -236,7 +313,7 @@ $(".selector").gantt({
 						<td>
 							<code>true</code></td>
 						<td>
-						    indicates if the chart should scroll to today's date on loading.</td>
+						    <code>boolean</code><br />indicates if the chart should scroll to today's date on loading.</td>
 					</tr>
 				</tbody>
 			</table>
@@ -423,7 +500,7 @@ values: [{
 
     </body>
 	<script src="http://code.jquery.com/jquery-1.7.2.min.js"></script>
-    
+    <script src="js/jquery-ui-1.8.20.custom.min.js"></script>
     <script src="js/jquery.cookie.js"></script>
     <script src="js/jquery.fn.gantt.js"></script>
 	<script src="http://twitter.github.com/bootstrap/assets/js/bootstrap-tooltip.js"></script>
@@ -431,16 +508,16 @@ values: [{
 	<script src="http://taitems.github.com/UX-Lab/core/js/prettify.js"></script>
     <script>
 
-		$(function() {
+        $(function () {
 
-			"use strict";
+            "use strict";
 
-			$(".gantt").gantt({
-			    source: [{ id: 0,
-			        name: "Test 0",
-			        desc: "Desc 0",
-			        cssClass: "ganttDarkBlue",
-			        values: [
+            $(".gantt").gantt({
+                source: [{ id: 0,
+                    name: "Test 0",
+                    desc: "Desc 0",
+                    cssClass: "ganttDarkBlue",
+                    values: [
                             {
                                 from: "/Date(1339515549464)/",
                                 to: "/Date(1339515549464)/",
@@ -551,7 +628,7 @@ values: [{
                                     id: 1009
                                 }
                             }]
-			                                }
+                }
                             ,
                             { id: 1,
                                 name: "Test 1",
@@ -1605,29 +1682,67 @@ values: [{
                                 }
                             }
                         ]
-                  }],
+                            }],
                 navigate: "scroll",
                 scale: "weeks",
                 maxScale: "months",
                 minScale: "days",
                 itemsPerPage: 10,
+                draggable: true,
                 useCookie: true,
                 scrollToToday: false,
-                onclick: function (e) {
-                    var i = e.id;
-                    alert("Would call out to server for editing item " + i);
+                onItem: [
+                            {
+                                event: 'click',
+                                func: function (e, data) {
+                                    var i = data.id;
+                                    alert("Would call out to server for editing item " + i);
+                                }
+                            },
+                               {
+                                   event: 'mouseover',
+                                   func: function (e, data) {
+                                       $("#mouseover").html("Hover over item: " + data.id);
+                                       
+                                   }
+                               },
+                               {
+                                   event: 'resize',
+                                   func: function (e, data, newValues) {
+                                       
+                                       var startdate = new Date(parseInt(newValues.startDate));
+                                       var enddate = new Date(parseInt(newValues.endDate));
+                                       alert("Resizing Item: " + data.id + "          StartDate: " + startdate + "       EndDate:" + enddate);
+                                   }
+                               }
+                            ],
+                
+                onEmptyCell: [
+                            {
+                                event: 'mouseover',
+                                func: function (dt, rowId) {
+                                    var date = new Date(parseInt(dt));
+                                    $("#mouseover").html("Position: " + date);
+                                    //alert("Click on empty cell: Would call out to server for adding a new entry on Date: " + date + "          DateDouble: " + dt + "       RowId:" + rowId);
+                                }
+                            },
+                               {
+                                   event: 'dblclick',
+                                   func: function (dt, rowId) {
+                                       var date = new Date(parseInt(dt));
+                                       alert("Double Click on empty cell:Would call out to server for adding a new entry on Date: " + date + "          DateDouble: " + dt + "       RowId:" + rowId);
+                                   }
+                               }
+                            ],
+                onComplete : function () {
+                    $("#msg").html("Ready");
                 },
-                onAddClick: function (dt, rowId) {
-                    var date = new Date(parseInt(dt));
-                    alert("Would call out to server for adding a new entry on Date: " + date + "          DateDouble: " + dt + "       RowId:" + rowId);
-                },
-
                 holidays: ["\/Date(1294268400000)\/", "\/Date(1294268400000)\/", "\/Date(1303596000000)\/", "\/Date(1306274400000)\/", "\/Date(1304200800000)\/", "\/Date(1304373600000)\/", "\/Date(1307829600000)\/", "\/Date(1308780000000)\/", "\/Date(1313359200000)\/", "\/Date(1320105600000)\/", "\/Date(1320966000000)\/", "\/Date(1324767600000)\/", "\/Date(1324854000000)\/", "\/Date(1325372400000)\/", "\/Date(1325804400000)\/", "\/Date(1333836000000)\/", "\/Date(1336514400000)\/", "\/Date(1335823200000)\/", "\/Date(1335996000000)\/", "\/Date(1338069600000)\/", "\/Date(1339020000000)\/", "\/Date(1344981600000)\/", "\/Date(1351724400000)\/", "\/Date(1352588400000)\/", "\/Date(1356390000000)\/", "\/Date(1356476400000)\/"]
             });
-            
-			prettyPrint();
 
-		});
+            prettyPrint();
+
+        });
 
     </script>
 </html>

@@ -30,8 +30,9 @@
             maxScale: "months",
             minScale: "hours",
             waitText: "Please wait...",
-            onclick: function (data) { return; },
-            onAddClick: function (data) { return; },
+            onEmptyCell: [],
+            onItem: [],
+            onComplete: function () { return; },
             scrollToToday: true
         };
 
@@ -191,6 +192,7 @@
 
                 // core.render(element);
                 core.waitToggle(element, true, function () { core.render(element); });
+                
             },
             render: function (element) {
                 var content = $('<div class="fn-content"/>');
@@ -269,6 +271,7 @@
 
                 $dataPanel.css({ height: $leftPanel.height() });
                 core.waitToggle(element, false);
+                settings.onComplete(element);
             },
             leftPanel: function (element) {
                 /* Left panel */
@@ -308,55 +311,54 @@
                 else if (document.addEventListener)
                     element.addEventListener(mousewheelevt, function (e) { core.wheelScroll(element, e); }, false);
 
+                for (var i = 0; i < settings.onEmptyCell.length; i++) {
+                    dataPanel.bind(settings.onEmptyCell[i].event, { evt: settings.onEmptyCell[i].func }, function (e) {
+                        e.stopPropagation();
+                        var corrX, corrY;
+                        var leftpanel = $(element).find(".fn-gantt .leftPanel");
+                        var datapanel = $(element).find(".fn-gantt .dataPanel");
+                        switch (settings.scale) {
+                            case "weeks":
+                                corrY = tools.getCellSize() * 2;
+                                break;
+                            case "months":
+                                corrY = tools.getCellSize();
+                                break;
+                            case "hours":
+                            case "days":
+                                corrY = tools.getCellSize() * 3;
+                                break;
+                            default:
+                                corrY = tools.getCellSize() * 2;
+                                break;
+                        }
 
-                // addNEwClick
-                dataPanel.click(function (e) {
+                        // Adjust, so get middle of elm
+                        // corrY -= Math.floor(tools.getCellSize() / 2);
 
-                    e.stopPropagation();
-                    var corrX, corrY;
-                    var leftpanel = $(element).find(".fn-gantt .leftPanel");
-                    var datapanel = $(element).find(".fn-gantt .dataPanel");
-                    switch (settings.scale) {
-                        case "weeks":
-                            corrY = tools.getCellSize() * 2;
-                            break;
-                        case "months":
-                            corrY = tools.getCellSize();
-                            break;
-                        case "hours":
-                        case "days":
-                            corrY = tools.getCellSize() * 3;
-                            break;
-                        default:
-                            corrY = tools.getCellSize() * 2;
-                            break;
-                    }
+                        //find column
+                        var col = core.elementFromPoint(e.pageX, datapanel.offset().top + corrY);
+                        // hit the label?
+                        if (col.className == "fn-label") {
+                            col = $(col.parentNode);
+                        } else {
+                            col = $(col);
+                        }
 
-                    // Adjust, so get middle of elm
-                    // corrY -= Math.floor(tools.getCellSize() / 2);
+                        var dt = col.attr("repdate");
+                        //find row
+                        var row = core.elementFromPoint(leftpanel.offset().left + leftpanel.width() - 10, e.pageY);
+                        // hit the label?
+                        if (row.className.indexOf("fn-label") == 0) {
+                            row = $(row.parentNode);
+                        } else {
+                            row = $(row);
+                        }
+                        var rowId = row.data().id;
+                        e.data.evt(dt, rowId);
+                    });
+                }
 
-                    //find column
-                    var col = core.elementFromPoint(e.pageX, datapanel.offset().top + corrY);
-                    // hit the label?
-                    if (col.className == "fn-label") {
-                        col = $(col.parentNode);
-                    } else {
-                        col = $(col);
-                    }
-
-                    var dt = col.attr("repdate");
-                    //find row
-                    var row = core.elementFromPoint(leftpanel.offset().left + leftpanel.width() - 10, e.pageY);
-                    // hit the label?
-                    if (row.className.indexOf("fn-label") == 0) {
-                        row = $(row.parentNode);
-                    } else {
-                        row = $(row);
-                    }
-                    var rowId = row.data().id;
-
-                    settings.onAddClick(dt, rowId);
-                });
                 return dataPanel;
             },
             // Creates Data container with header
@@ -386,7 +388,7 @@
                 var holidays = settings.holidays ? settings.holidays.join() : '';
 
                 switch (settings.scale) {
-                    // hours /////////////////////////////////////////////////////////////////////////////////////////                      
+                    // hours /////////////////////////////////////////////////////////////////////////////////////////                            
                     case "hours":
 
                         range = tools.parseTimeRange(element.dateStart, element.dateEnd, element.scaleStep);
@@ -512,7 +514,7 @@
 
                         break;
 
-                    // weeks /////////////////////////////////////////////////////////////////////////////////////////                      
+                    // weeks /////////////////////////////////////////////////////////////////////////////////////////                            
                     case "weeks":
                         range = tools.parseWeeksRange(element.dateStart, element.dateEnd);
                         yearArr = ['<div class="row"/>'];
@@ -585,7 +587,7 @@
 
 
                         break;
-                    // months ////////////////////////////////////////////////////////////////////////////////////////                      
+                    // months ////////////////////////////////////////////////////////////////////////////////////////                            
                     case 'months':
                         range = tools.parseMonthsRange(element.dateStart, element.dateEnd);
 
@@ -644,7 +646,7 @@
 
 
                         break;
-                    // days //////////////////////////////////////////////////////////////////////////////////////////                      
+                    // days //////////////////////////////////////////////////////////////////////////////////////////                            
                     default:
                         range = tools.parseDateRange(element.dateStart, element.dateEnd);
 
@@ -943,10 +945,76 @@
 					  })
 					  ;
                 }
-                bar.click(function (e) {
-                    e.stopPropagation();
-                    settings.onclick($(this).data("dataObj"));
-                });
+
+                for (var i = 0; i < settings.onItem.length; i++) {
+
+                    if (settings.onItem[i].event == 'resize') {
+                        bar.resizable({
+                            grid: [24, 24],
+                            minHeight: 18,
+                            maxHeight: 18,
+                            handles: "e,w",
+                            minWidth: 24
+                        });
+                        bar.bind("resizestop", { evt: settings.onItem[i].func },
+                            function (event, ui) {
+                                event.stopPropagation();
+                                var corrY;
+                                var datapanel = $(".fn-gantt .rightPanel .dataPanel");
+                                var leftpanel = $(".fn-gantt .rightPanel .leftPanel");
+                                ;
+                                switch (settings.scale) {
+                                    case "weeks":
+                                        corrY = tools.getCellSize() * 2;
+                                        break;
+                                    case "months":
+                                        corrY = tools.getCellSize();
+                                        break;
+                                    case "hours":
+                                    case "days":
+                                        corrY = tools.getCellSize() * 3;
+                                        break;
+                                    default:
+                                        corrY = tools.getCellSize() * 2;
+                                        break;
+                                }
+                                var startDate, endDate;
+
+                                // resize to the right --> change endDate
+
+                                // Adjust, so get middle of elm
+                                // corrY -= Math.floor(tools.getCellSize() / 2);
+
+                                //find column
+                                var col = core.elementFromPoint(event.pageX, datapanel.offset().top + corrY);
+                                // hit the label?
+                                if (col.className == "fn-label") {
+                                    col = $(col.parentNode);
+                                } else {
+                                    col = $(col);
+                                }
+
+                                // left or right resize
+                                if (ui.originalPosition.left == ui.position.left) {
+                                    endDate = col.attr("repdate");
+                                    startDate = "";
+
+                                } else {
+                                    startDate = col.attr("repdate");
+                                    endDate = "";
+                                }
+
+                                event.data.evt(event, $(this).data("dataObj"), { startDate: startDate, endDate: endDate });
+
+                            });
+                    } else {
+                        bar.bind(settings.onItem[i].event, { evt: settings.onItem[i].func }, function (e) {
+                            e.stopPropagation();
+                            e.data.evt(e, $(this).data("dataObj"));
+                        });
+                    }
+
+                }
                 return bar;
             },
             markNow: function (element) {
@@ -1094,7 +1162,7 @@
                                     datapanel.append(_bar);
                                     break;
 
-                                // Days                  
+                                // Days                        
                                 default:
                                     var dFrom = tools.genId(tools.dateDeserialize(day.from).getTime());
                                     var dTo = tools.genId(tools.dateDeserialize(day.to).getTime());
